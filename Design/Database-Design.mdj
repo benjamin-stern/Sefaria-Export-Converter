@@ -2175,7 +2175,7 @@
 											"font": "Arial;13;1",
 											"left": 229,
 											"top": 967,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "Chapter"
 										},
@@ -2208,7 +2208,7 @@
 									"font": "Arial;13;0",
 									"left": 224,
 									"top": 960,
-									"width": 116.58349609375,
+									"width": 115.142578125,
 									"height": 25,
 									"stereotypeLabel": {
 										"$ref": "AAAAAAFyfZwYCZyDj1I="
@@ -2245,7 +2245,7 @@
 											"font": "Arial;13;0",
 											"left": 229,
 											"top": 990,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "+ID",
 											"horizontalAlignment": 0
@@ -2262,7 +2262,7 @@
 											"font": "Arial;13;0",
 											"left": 229,
 											"top": 1005,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "+ChapterGroupID",
 											"horizontalAlignment": 0
@@ -2279,7 +2279,7 @@
 											"font": "Arial;13;0",
 											"left": 229,
 											"top": 1020,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "+HasChild",
 											"horizontalAlignment": 0
@@ -2296,7 +2296,7 @@
 											"font": "Arial;13;0",
 											"left": 229,
 											"top": 1035,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "+ParentChapterID",
 											"horizontalAlignment": 0
@@ -2313,7 +2313,7 @@
 											"font": "Arial;13;0",
 											"left": 229,
 											"top": 1050,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "+Index",
 											"horizontalAlignment": 0
@@ -2330,7 +2330,7 @@
 											"font": "Arial;13;0",
 											"left": 229,
 											"top": 1065,
-											"width": 106.58349609375,
+											"width": 105.142578125,
 											"height": 13,
 											"text": "+Text",
 											"horizontalAlignment": 0
@@ -2339,7 +2339,7 @@
 									"font": "Arial;13;0",
 									"left": 224,
 									"top": 985,
-									"width": 116.58349609375,
+									"width": 115.142578125,
 									"height": 98
 								},
 								{
@@ -2354,7 +2354,7 @@
 									"font": "Arial;13;0",
 									"left": 224,
 									"top": 1083,
-									"width": 116.58349609375,
+									"width": 115.142578125,
 									"height": 10
 								},
 								{
@@ -2392,7 +2392,7 @@
 							"containerChangeable": true,
 							"left": 224,
 							"top": 960,
-							"width": 116.58349609375,
+							"width": 115.142578125,
 							"height": 133,
 							"nameCompartment": {
 								"$ref": "AAAAAAFyfZwYCZyCHPY="
