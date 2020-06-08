@@ -1,4 +1,5 @@
-﻿using Converter.Service;
+﻿using Converter.Model.SQLite;
+using Converter.Service;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -23,26 +24,46 @@ namespace Converter
     public partial class MainWindow : Window
     {
         private SefariaMongoDBService _serviceMongo;
+        private SefariaSQLiteConversionContext _serviceSQLite;
         public MainWindow()
         {
             InitializeComponent();
 
             _serviceMongo = new SefariaMongoDBService();
-            
+            _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+            Converter.Model.SQLite.Version defaultVersion = new Converter.Model.SQLite.Version() { Major = 0, Minor = 0, Build = 0 };
+            Converter.Model.SQLite.Version loadedVersion = null;
+            if (_serviceSQLite.Database.CanConnect())
+            {
+                loadedVersion = _serviceSQLite.Version.FirstOrDefault();
+            }
+
+            if (loadedVersion != null) {
+                _serviceSQLite.Database.EnsureDeleted();
+            }
+
+            _serviceSQLite.Database.EnsureCreated();
+            defaultVersion.Build = (loadedVersion!=null?loadedVersion.Build:0)+1;
+
+            _serviceSQLite.Version.Add(defaultVersion);
+            _serviceSQLite.Languages.Add(new Language { Value = LanguageTypes.Undefined.ToString() });
+            _serviceSQLite.Languages.Add(new Language { Value = LanguageTypes.English.ToString() });
+            _serviceSQLite.Languages.Add(new Language { Value = LanguageTypes.Hebrew.ToString() });
+            _serviceSQLite.SaveChanges();
         }
 
         private void Convert_OnClick(object sender, RoutedEventArgs e)
         {
             
             var count = _serviceMongo.TextsCount();
-            Log("text count: " + count);
+            //Log("text count: " + count);
             for (int i = 0; i < count; i++)
             {
                 var text = _serviceMongo.GetTextAt(i);
-                Log("text at: " + i + " count: " + text.Elements.ToList().Count);
+                //Log("text at: " + i + " count: " + text.Elements.ToList().Count);
                 for (int j = 0; j < text.Elements.ToList().Count; j++)
                 {
-                    Log(" element: name: " + text.GetElement(j).Name + " value: " + text.GetElement(j).Value);
+                    //Log(" element: name: " + text.GetElement(j).Name + " value: " + text.GetElement(j).Value);
                 }
                 
                 
