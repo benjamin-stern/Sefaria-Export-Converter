@@ -12,9 +12,9 @@ namespace Converter
             : base(options) { }
         public DbSet<Converter.Model.SQLite.Version> Version { get; set; }
         public DbSet<Language> Languages { get; set; }
-        //public DbSet<LabelGroup> LabelGroups { get; set; }
-        //public DbSet<Label> Labels { get; set; }
-        //public DbSet<Text> Texts { get; set; }
+        public DbSet<LabelGroup> LabelGroups { get; set; }
+        public DbSet<Label> Labels { get; set; }
+        public DbSet<Text> Texts { get; set; }
         //public DbSet<Version> Version { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
@@ -22,9 +22,9 @@ namespace Converter
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            //modelBuilder.Entity<Converter.Model.SQLite.Version>().HasNoKey();
             base.OnModelCreating(modelBuilder);
 
-            //modelBuilder.Entity<Converter.Model.SQLite.Version>().HasNoKey();
             //modelBuilder.Entity<Text>().HasKey(t=>t.Id);
         }
     }

@@ -1,4 +1,4 @@
-﻿using Converter.Model.MongoDB;
+﻿using Converter.Model.SQLite;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
@@ -29,46 +29,58 @@ namespace Converter.Service
             return _texts.CountDocuments(new BsonDocument()); 
         }
 
-        public BsonDocument GetTextAt(int index) {
-            return _texts.Find(_ => true).Skip(index).FirstOrDefault();
+        public Text GetTextAt(int index) {
+            Text text = new Text();
+            LabelGroup versionTitleLG = new LabelGroup();
+            versionTitleLG.Labels = new List<Label>();
+            BsonDocument value = _texts.Find(_ => true).Skip(index).FirstOrDefault();
+            foreach (var element in value.Elements)
+            {
+                switch (element.Name)
+                {
+                    case "title":
+                        text.Title = element.Value.AsString;
+                        break;
+                    case "priority":
+                        text.Priority = element.Value.ToInt32();
+                        break;
+                    case "versionNotes":
+                        text.VersionNotes= element.Value.AsString;
+                        break;
+                    case "versionSource":
+                        text.VersionSource = element.Value.BsonType != BsonType.Null? element.Value.AsString:null;
+                        break;
+                    case "language":
+                        switch (element.Value.AsString)
+                        {
+                            case "en":
+                                text.LanguageId = (int)LanguageTypes.English;
+                                break;
+                            case "he":
+                                text.LanguageId = (int)LanguageTypes.Hebrew;
+                                break;
+                            default:
+                                text.LanguageId = (int)LanguageTypes.Undefined;
+                                break;
+                        }
+                        break;
+                    case "versionTitle":
+                        versionTitleLG.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
+                        text.VersionTitle = versionTitleLG;
+                        break;
+                    case "versionTitleInHebrew":
+                        versionTitleLG.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
+                        text.VersionTitle = versionTitleLG;
+                        break;
+                    default:
+                        break;
+                    
+                }
+            }
+            
+            return text;
         }
     }
 }
 
-namespace Converter.Model.MongoDB
-{
-    [BsonIgnoreExtraElements]
-    class Text {
-        [BsonId]
-        [BsonRepresentation(BsonType.ObjectId)]
-        public string Id;
-
-        [BsonElement("language")]
-        public string Language;
-
-        [BsonElement("title")]
-        public string Title;
-
-        [BsonElement("versionSource")]
-        public string VersionSource;
-
-        [BsonElement("versionTitle")]
-        public string VersionTitle;
-
-        [BsonElement("versionTitleInHebrew")]
-        public string VersionTitleHebrew;
-
-        [BsonElement("chapter")]
-        [BsonRepresentation(BsonType.Document)]
-        public List<Chapter> Chapter;
-    }
-    [BsonIgnoreExtraElements]
-    class Chapter {
-
-        public string Value;
-        public List<Chapter> List;
-    }
-
-
-}
 

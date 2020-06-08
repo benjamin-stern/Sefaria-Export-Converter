@@ -40,8 +40,9 @@ namespace Converter
 
             if (loadedVersion != null) {
                 _serviceSQLite.Database.EnsureDeleted();
+                _serviceSQLite.Dispose();
             }
-
+            _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
             _serviceSQLite.Database.EnsureCreated();
             defaultVersion.Build = (loadedVersion!=null?loadedVersion.Build:0)+1;
 
@@ -54,21 +55,13 @@ namespace Converter
 
         private void Convert_OnClick(object sender, RoutedEventArgs e)
         {
-            
-            var count = _serviceMongo.TextsCount();
-            //Log("text count: " + count);
-            for (int i = 0; i < count; i++)
+
+            var totalTexts = _serviceMongo.TextsCount();
+            for (int i = 0; i < totalTexts; i++)
             {
-                var text = _serviceMongo.GetTextAt(i);
-                //Log("text at: " + i + " count: " + text.Elements.ToList().Count);
-                for (int j = 0; j < text.Elements.ToList().Count; j++)
-                {
-                    //Log(" element: name: " + text.GetElement(j).Name + " value: " + text.GetElement(j).Value);
-                }
-                
-                
+                _serviceSQLite.AddAsync(_serviceMongo.GetTextAt(i));
             }
-            
+            _serviceSQLite.SaveChanges();
         }
 
         private void Log(string msg)

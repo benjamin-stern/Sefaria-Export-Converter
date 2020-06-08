@@ -9,19 +9,22 @@ namespace Converter.Model.SQLite
     public class Text
     {
         [Key]
-        public int Id;
+        public int Id { get; set; }
 
-        public string Title;
-        public int Priority;
+        public string Title { get; set; }
+        public int? Priority { get; set; }
 
-        public string License;
-        public string VersionSource;
+        public string License { get; set; }
+        public string VersionSource { get; set; }
 
         [ForeignKey("Language")]
-        public int LanguageId;
-        public Language Language;
+        public int? LanguageId { get; set; }
+        public  Language Language { get; set; }
 
-        public string VersionString;
+        [ForeignKey("LabelGroup")]
+        public int VersionTitleId { get; set; }
+        public LabelGroup VersionTitle { get; set; }
+        public string VersionNotes { get; set; }
 
     }
 }

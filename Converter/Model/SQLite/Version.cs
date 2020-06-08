@@ -7,9 +7,10 @@ namespace Converter.Model.SQLite
 {
     public class Version
     {
+        [Key]
+        public int Id { get; set; }
         public int Major { get; set; }
         public int Minor { get; set; }
-        [Key]
         public int Build { get; set; }
     }
 }
