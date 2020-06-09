@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -51,17 +52,52 @@ namespace Converter
             _serviceSQLite.Languages.Add(new Language { Value = LanguageTypes.English.ToString() });
             _serviceSQLite.Languages.Add(new Language { Value = LanguageTypes.Hebrew.ToString() });
             _serviceSQLite.SaveChanges();
+
+            // Create a timer with a two second interval.
+            aTimer = new System.Timers.Timer(33);
+            // Hook up the Elapsed event for the timer. 
+            aTimer.Elapsed += OnTimedEvent;
+            aTimer.AutoReset = true;
+            aTimer.Enabled = true;
+            
         }
 
-        private void Convert_OnClick(object sender, RoutedEventArgs e)
+        private void OnTimedEvent(object sender, ElapsedEventArgs e)
         {
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                progress.Value = (Complete / Total) * 100f;
+            }));
+            
+        }
 
-            var totalTexts = _serviceMongo.TextsCount();
+        private static System.Timers.Timer aTimer;
+
+        private Task ConversionTask;
+        private readonly object TaskLock = new object();
+
+        private float Complete = 0f;
+        private float Total = 1f;
+
+        private void ConversionLogic() {
+            var totalTexts = Total = _serviceMongo.TextsCount();
             for (int i = 0; i < totalTexts; i++)
             {
                 _serviceSQLite.AddAsync(_serviceMongo.GetTextAt(i));
+                Complete = i;
             }
             _serviceSQLite.SaveChanges();
+        }
+
+
+
+        private void Convert_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (ConversionTask == null || ConversionTask.IsCompleted)
+            {
+                ConversionTask = new Task(ConversionLogic);
+                ConversionTask.Start();
+            }
         }
 
         private void Log(string msg)

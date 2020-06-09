@@ -8,9 +8,9 @@ namespace Converter.Model.SQLite
 {
     public enum LanguageTypes
     {
-        Undefined = 0,
-        English = 1,
-        Hebrew = 2
+        Undefined = 1,
+        English = 2,
+        Hebrew = 3
     }
     public class Language
     {
