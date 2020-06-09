@@ -14,14 +14,16 @@ namespace Converter.Service
     //https://docs.microsoft.com/en-us/aspnet/core/tutorials/first-mongo-app?view=aspnetcore-3.1&tabs=visual-studio
     class SefariaMongoDBService
     {
-        private readonly IMongoCollection<BsonDocument> _texts;
+        private IMongoCollection<BsonDocument> _texts;
+        private MongoClient _client;
         public SefariaMongoDBService()
         {
-            var client = new MongoClient("mongodb://localhost:27017");
-            var database = client.GetDatabase("sefaria");
+            
+            _client = new MongoClient("mongodb://localhost:27017");
+            var database = _client.GetDatabase("sefaria");
 
             _texts = database.GetCollection<BsonDocument>("texts");
-            var amount = _texts.CountDocuments(new BsonDocument());
+            //var amount = _texts.CountDocuments(new BsonDocument());
         }
 
         public long TextsCount()
@@ -80,6 +82,15 @@ namespace Converter.Service
             
             return text;
         }
+
+        //public void Dispose() {
+            //_client.Cluster.Dispose();
+            //_client = null;
+            
+            //
+            //_texts = null;
+
+        //}
     }
 }
 
