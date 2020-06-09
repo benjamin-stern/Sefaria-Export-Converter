@@ -12,5 +12,9 @@ namespace Converter.Model.SQLite
         public int Major { get; set; }
         public int Minor { get; set; }
         public int Build { get; set; }
+
+        override public string ToString() {
+            return Major + "." + Minor + "." + Build;
+        }
     }
 }
