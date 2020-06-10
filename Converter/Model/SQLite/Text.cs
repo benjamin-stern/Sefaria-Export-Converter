@@ -26,5 +26,9 @@ namespace Converter.Model.SQLite
         public LabelGroup VersionTitle { get; set; }
         public string VersionNotes { get; set; }
 
+        [ForeignKey("Chapter")]
+        public int? ChapterId { get; set; }
+        public Chapter Chapter { get; set; }
+
     }
 }

@@ -39,7 +39,6 @@ namespace Converter
         }
 
         private float TrackingTotalAmount = 0f;
-        private float TrackingCurrentAmount = 0f;
         private long TrackingStartTime = 0;
         private void OnTimedEvent(object sender, ElapsedEventArgs e)
         {
@@ -122,6 +121,12 @@ namespace Converter
             for (int i = 0; i < totalTexts; i++)
             {
                 _serviceSQLite.AddAsync(_serviceMongo.GetTextAt(i));
+                
+                if (i % 260 == 0) {
+                    _serviceSQLite.SaveChanges();
+                    _serviceSQLite.DisposeAsync();
+                    _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+                }
                 Complete = i;
                 //Log($"Processing: index {i} / total {totalTexts}");
             }
@@ -138,9 +143,10 @@ namespace Converter
         {
             if (!isActive && ConversionTask == null || ConversionTask.IsCompleted)
             {
+                convert.IsEnabled = !(isActive = true);
+
                 ConversionTask = new Task(ConversionLogic);
                 ConversionTask.Start();
-                isActive = true;
             }
         }
 

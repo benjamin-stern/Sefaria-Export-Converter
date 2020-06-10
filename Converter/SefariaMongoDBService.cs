@@ -74,6 +74,9 @@ namespace Converter.Service
                         versionTitleLG.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
                         text.VersionTitle = versionTitleLG;
                         break;
+                    case "chapter":
+                        text.Chapter = GenerateChapterTree(element.Value);
+                        break;
                     default:
                         break;
                     
@@ -81,6 +84,43 @@ namespace Converter.Service
             }
             
             return text;
+        }
+
+        private Chapter GenerateChapterTree(BsonValue value, Chapter parent = null, int index = 0)
+        {
+            Chapter instance = new Chapter { Index = index };
+            if (parent != null) {
+                instance.ParentChapter = parent;
+            }
+
+            switch (value.BsonType) {
+                case BsonType.Array:
+                    var array = value.AsBsonArray;
+                    instance.Children = new List<Chapter>();
+                    for (int i = 0; i < array.Count; i++)
+                    {
+                        instance.Children.Add(GenerateChapterTree(array[i], instance, i));
+                        instance.HasChild = true;
+                    }
+                    break;
+                case BsonType.Document:
+                    var document = value.AsBsonDocument;
+                    instance.Children = new List<Chapter>();
+                    for (int i = 0; i < document.Elements.Count();i++)
+                    {
+                        var element = document.GetElement(i);
+                        var child = GenerateChapterTree(element.Value, instance, i);
+                        child.Text = element.Name;
+                        instance.Children.Add(child);
+                    }
+                    
+                    break;
+                case BsonType.String:
+                    instance.Text = value.AsString;
+                    break;
+            }
+
+            return instance;
         }
 
         //public void Dispose() {
