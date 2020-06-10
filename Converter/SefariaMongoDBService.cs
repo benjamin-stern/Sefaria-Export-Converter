@@ -35,7 +35,7 @@ namespace Converter.Service
             return root;
         }
 
-        private Topic GetNestedTopics(BsonDocument value, Topic parent = null, int index = 0)
+        private Topic GetNestedTopics(BsonDocument document, Topic parent = null, int index = 0)
         {
             Topic instance = new Topic { Index = index };
             if (parent != null)
@@ -43,65 +43,44 @@ namespace Converter.Service
                 instance.ParentTopic = parent;
             }
 
-            switch (value.BsonType)
+            
+            instance.Children = new List<Topic>();
+            instance.LabelGroup = new LabelGroup();
+            instance.LabelGroup.Labels = new List<Label>();
+            for (int i = 0; i < document.Elements.Count(); i++)
             {
-                //case BsonType.Array:
-                //    var array = value.AsBsonArray;
-                //    instance.Children = new List<Topic>();
-                //    for (int i = 0; i < array.Count; i++)
-                //    {
-                //        instance.Children.Add(GenerateChapterTree(array[i], instance, i));
-                //        //instance.HasChild = true;
-                //    }
-                //    break;
-                case BsonType.Document:
-                    var document = value.AsBsonDocument;
-                    instance.Children = new List<Topic>();
-                    instance.LabelGroup = new LabelGroup();
-                    instance.LabelGroup.Labels = new List<Label>();
-                    for (int i = 0; i < document.Elements.Count(); i++)
-                    {
-                        var element = document.GetElement(i);
+                var element = document.GetElement(i);
                         
-                        switch (element.Name)
+                switch (element.Name)
+                {
+                    case "name":
+                        instance.Name = element.Value.AsString;
+                        break;
+                    case "category":
+                        instance.Name = element.Value.AsString;
+                        instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
+                        break;
+                    case "heCategory":
+                        instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
+                        break;
+                    case "title":
+                        instance.Name = element.Value.AsString;
+                        instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
+                        break;
+                    case "heTitle":
+                        instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
+                        break;
+                    case "contents":
+                        var array = element.Value.AsBsonArray;
+                        instance.Children = new List<Topic>();
+                        for (int j = 0; j < array.Count; j++)
                         {
-                            case "name":
-                                instance.Name = element.Value.AsString;
-                                break;
-                            case "category":
-                                instance.Name = element.Value.AsString;
-                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
-                                break;
-                            case "heCategory":
-                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
-                                break;
-                            case "title":
-                                instance.Name = element.Value.AsString;
-                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
-                                break;
-                            case "heTitle":
-                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
-                                break;
-                            case "contents":
-                                var array = element.Value.AsBsonArray;
-                                instance.Children = new List<Topic>();
-                                for (int j = 0; j < array.Count; j++)
-                                {
-                                    var item = array[j];
-                                    if(item.IsBsonDocument) instance.Children.Add(GetNestedTopics(item.AsBsonDocument, instance, j));
-                                }
-                                break;
+                            var item = array[j];
+                            if(item.IsBsonDocument) instance.Children.Add(GetNestedTopics(item.AsBsonDocument, instance, j));
                         }
+                        break;
+                }
                         
-                        //var child = GenerateChapterTree(element.Value, instance, i);
-                        //child.Text = element.Name;
-                        //instance.Children.Add(child);
-                    }
-
-                    break;
-                case BsonType.String:
-                    instance.Name = value.AsString;
-                    break;
             }
 
             return instance;
