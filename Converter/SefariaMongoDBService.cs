@@ -35,7 +35,7 @@ namespace Converter.Service
             return root;
         }
 
-        private Topic GetNestedTopics(BsonDocument document, Topic parent = null, int index = 0)
+        private Topic GetNestedTopics(BsonDocument document, Topic parent = null, int index = 1)
         {
             Topic instance = new Topic { Index = index };
             if (parent != null)
@@ -43,7 +43,6 @@ namespace Converter.Service
                 instance.ParentTopic = parent;
             }
 
-            
             instance.Children = new List<Topic>();
             instance.LabelGroup = new LabelGroup();
             instance.LabelGroup.Labels = new List<Label>();
@@ -76,7 +75,7 @@ namespace Converter.Service
                         for (int j = 0; j < array.Count; j++)
                         {
                             var item = array[j];
-                            if(item.IsBsonDocument) instance.Children.Add(GetNestedTopics(item.AsBsonDocument, instance, j));
+                            if(item.IsBsonDocument) instance.Children.Add(GetNestedTopics(item.AsBsonDocument, instance, j+1));
                         }
                         break;
                 }
@@ -91,7 +90,7 @@ namespace Converter.Service
             return _texts.CountDocuments(new BsonDocument()); 
         }
 
-        public Text GetTextAt(int index) {
+        public Text GetTextAt(int index, SefariaSQLiteConversionContext targetContext) {
             Text text = new Text();
             LabelGroup versionTitleLG = new LabelGroup();
             versionTitleLG.Labels = new List<Label>();
@@ -101,7 +100,21 @@ namespace Converter.Service
                 switch (element.Name)
                 {
                     case "title":
-                        text.Title = element.Value.AsString;
+                        //text.Title = element.Value.AsString;
+                        Topic topic = targetContext.Topics.Where(t => t.Name == element.Value.AsString).FirstOrDefault();
+                        if (topic != null)
+                        {
+                            text.TopicId = topic.Id;
+                        }
+                        else {
+                            //topic = targetContext.Texts.Select(txt=>txt.Topic).Where(t => t.Name == element.Value.AsString).FirstOrDefault();
+                            //if (topic != null) {
+                            //    text.TopicId = topic.Id;
+                            //} else {
+                                text.Topic = new Topic { Name = element.Value.AsString, LabelGroup = versionTitleLG };
+                                targetContext.Topics.Add(text.Topic);
+                            //}
+                        }
                         break;
                     case "priority":
                         text.Priority = element.Value.ToInt32();
@@ -126,13 +139,15 @@ namespace Converter.Service
                                 break;
                         }
                         break;
+                    case "license":
+                        text.License=element.Value.AsString;
+                        break;
                     case "versionTitle":
                         versionTitleLG.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
                         text.VersionTitle = versionTitleLG;
                         break;
                     case "versionTitleInHebrew":
                         versionTitleLG.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
-                        text.VersionTitle = versionTitleLG;
                         break;
                     case "chapter":
                         text.Chapter = GenerateChapterTree(element.Value);
@@ -146,7 +161,7 @@ namespace Converter.Service
             return text;
         }
 
-        private Chapter GenerateChapterTree(BsonValue value, Chapter parent = null, int index = 0)
+        private Chapter GenerateChapterTree(BsonValue value, Chapter parent = null, int index = 1)
         {
             Chapter instance = new Chapter { Index = index };
             if (parent != null) {
@@ -159,7 +174,7 @@ namespace Converter.Service
                     instance.Children = new List<Chapter>();
                     for (int i = 0; i < array.Count; i++)
                     {
-                        instance.Children.Add(GenerateChapterTree(array[i], instance, i));
+                        instance.Children.Add(GenerateChapterTree(array[i], instance, i+1));
                         instance.HasChild = true;
                     }
                     break;
@@ -169,7 +184,7 @@ namespace Converter.Service
                     for (int i = 0; i < document.Elements.Count();i++)
                     {
                         var element = document.GetElement(i);
-                        var child = GenerateChapterTree(element.Value, instance, i);
+                        var child = GenerateChapterTree(element.Value, instance, i+1);
                         child.Text = element.Name;
                         instance.Children.Add(child);
                     }

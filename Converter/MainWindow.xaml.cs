@@ -117,12 +117,20 @@ namespace Converter
             _serviceSQLite.Languages.Add(new Language { Value = LanguageTypes.Hebrew.ToString() });
             _serviceSQLite.SaveChanges();
 
+            //Processing Summaries
+            var topic = _serviceMongo.GetSummaryTopics();
+            _serviceSQLite.AddAsync(topic);
+            _serviceSQLite.SaveChanges();
+
+            //Processing Texts
             var totalTexts = Total = _serviceMongo.TextsCount();
             for (int i = 0; i < totalTexts; i++)
             {
-                _serviceSQLite.AddAsync(_serviceMongo.GetTextAt(i));
-                
-                if (i % 260 == 0) {
+                var txt = _serviceMongo.GetTextAt(i, _serviceSQLite);
+                _serviceSQLite.AddAsync(txt);
+
+                if (i % 260 == 0 || txt.TopicId == 0)
+                {
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
                     _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });

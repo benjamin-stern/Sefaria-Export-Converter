@@ -6,7 +6,7 @@ using System.Text;
 
 namespace Converter.Model.SQLite
 {
-    class Topic
+    public class Topic
     {
         [Key]
         public int Id { get; set; }

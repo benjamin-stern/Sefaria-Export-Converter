@@ -11,7 +11,9 @@ namespace Converter.Model.SQLite
         [Key]
         public int Id { get; set; }
 
-        public string Title { get; set; }
+        [ForeignKey("Topic")]
+        public int TopicId { get; set; }
+        public Topic Topic { get; set; }
         public int? Priority { get; set; }
 
         public string License { get; set; }
