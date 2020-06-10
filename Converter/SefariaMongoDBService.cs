@@ -15,6 +15,7 @@ namespace Converter.Service
     class SefariaMongoDBService
     {
         private IMongoCollection<BsonDocument> _texts;
+        private IMongoCollection<BsonDocument> _summaries;
         private MongoClient _client;
         public SefariaMongoDBService()
         {
@@ -23,7 +24,87 @@ namespace Converter.Service
             var database = _client.GetDatabase("sefaria");
 
             _texts = database.GetCollection<BsonDocument>("texts");
+            _summaries = database.GetCollection<BsonDocument>("summaries");
             //var amount = _texts.CountDocuments(new BsonDocument());
+        }
+
+        public Topic GetSummaryTopics()
+        {
+            //Topic root = new Topic() { Name = "toc" };
+            Topic root = GetNestedTopics(_summaries.Find(_ => true).FirstOrDefault());
+            return root;
+        }
+
+        private Topic GetNestedTopics(BsonDocument value, Topic parent = null, int index = 0)
+        {
+            Topic instance = new Topic { Index = index };
+            if (parent != null)
+            {
+                instance.ParentTopic = parent;
+            }
+
+            switch (value.BsonType)
+            {
+                //case BsonType.Array:
+                //    var array = value.AsBsonArray;
+                //    instance.Children = new List<Topic>();
+                //    for (int i = 0; i < array.Count; i++)
+                //    {
+                //        instance.Children.Add(GenerateChapterTree(array[i], instance, i));
+                //        //instance.HasChild = true;
+                //    }
+                //    break;
+                case BsonType.Document:
+                    var document = value.AsBsonDocument;
+                    instance.Children = new List<Topic>();
+                    instance.LabelGroup = new LabelGroup();
+                    instance.LabelGroup.Labels = new List<Label>();
+                    for (int i = 0; i < document.Elements.Count(); i++)
+                    {
+                        var element = document.GetElement(i);
+                        
+                        switch (element.Name)
+                        {
+                            case "name":
+                                instance.Name = element.Value.AsString;
+                                break;
+                            case "category":
+                                instance.Name = element.Value.AsString;
+                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
+                                break;
+                            case "heCategory":
+                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
+                                break;
+                            case "title":
+                                instance.Name = element.Value.AsString;
+                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.English, Text = element.Value.AsString });
+                                break;
+                            case "heTitle":
+                                instance.LabelGroup.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
+                                break;
+                            case "contents":
+                                var array = element.Value.AsBsonArray;
+                                instance.Children = new List<Topic>();
+                                for (int j = 0; j < array.Count; j++)
+                                {
+                                    var item = array[j];
+                                    if(item.IsBsonDocument) instance.Children.Add(GetNestedTopics(item.AsBsonDocument, instance, j));
+                                }
+                                break;
+                        }
+                        
+                        //var child = GenerateChapterTree(element.Value, instance, i);
+                        //child.Text = element.Name;
+                        //instance.Children.Add(child);
+                    }
+
+                    break;
+                case BsonType.String:
+                    instance.Name = value.AsString;
+                    break;
+            }
+
+            return instance;
         }
 
         public long TextsCount()

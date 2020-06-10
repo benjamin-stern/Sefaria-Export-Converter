@@ -15,7 +15,7 @@ namespace Converter
         public DbSet<LabelGroup> LabelGroups { get; set; }
         public DbSet<Label> Labels { get; set; }
         public DbSet<Text> Texts { get; set; }
-        //public DbSet<Version> Version { get; set; }
+        public DbSet<Topic> Topics { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite("Data Source=data.db");

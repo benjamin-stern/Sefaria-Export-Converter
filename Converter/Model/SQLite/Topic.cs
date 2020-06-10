@@ -13,9 +13,12 @@ namespace Converter.Model.SQLite
 
         public string Name { get; set; }
 
+        public int? Index { get; set; }
+
         [ForeignKey("Topic")]
         public int? ParentTopicId { get; set; }
         public Topic ParentTopic { get; set; }
+        public ICollection<Topic> Children { get; set; }
 
         [ForeignKey("LabelGroup")]
         public int? LabelGroupId { get; set; }
