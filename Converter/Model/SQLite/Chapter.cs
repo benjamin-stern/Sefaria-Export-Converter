@@ -17,5 +17,7 @@ namespace Converter.Model.SQLite
         public ICollection<Chapter> Children { get; set; }
         public int Index { get; set; }
         public string Text { get; set; }
+
+        //TODO: Consider Adding a ChapterClonedText to reduce duplication...
     }
 }

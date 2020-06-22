@@ -1,12 +1,17 @@
 ﻿using Converter.Model.SQLite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 using MongoDB.Driver;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 
 namespace Converter.Service
@@ -16,6 +21,8 @@ namespace Converter.Service
     {
         private IMongoCollection<BsonDocument> _texts;
         private IMongoCollection<BsonDocument> _summaries;
+        private IMongoCollection<BsonDocument> _links;
+
         private MongoClient _client;
         public SefariaMongoDBService()
         {
@@ -25,6 +32,8 @@ namespace Converter.Service
 
             _texts = database.GetCollection<BsonDocument>("texts");
             _summaries = database.GetCollection<BsonDocument>("summaries");
+            _links = database.GetCollection<BsonDocument>("links");
+
             //var amount = _texts.CountDocuments(new BsonDocument());
         }
 
@@ -100,20 +109,15 @@ namespace Converter.Service
                 switch (element.Name)
                 {
                     case "title":
-                        //text.Title = element.Value.AsString;
-                        Topic topic = targetContext.Topics.Where(t => t.Name == element.Value.AsString).FirstOrDefault();
+                        var titleName = element.Value.AsString;
+                        Topic topic = FindFirstOrDefaultWhere(targetContext.Topics, t => t.Name == titleName);
                         if (topic != null)
                         {
-                            text.TopicId = topic.Id;
+                            text.Topic = topic;
                         }
                         else {
-                            //topic = targetContext.Texts.Select(txt=>txt.Topic).Where(t => t.Name == element.Value.AsString).FirstOrDefault();
-                            //if (topic != null) {
-                            //    text.TopicId = topic.Id;
-                            //} else {
-                                text.Topic = new Topic { Name = element.Value.AsString, LabelGroup = versionTitleLG };
-                                targetContext.Topics.Add(text.Topic);
-                            //}
+                            text.Topic = new Topic { Name = titleName, LabelGroup = versionTitleLG };
+                            targetContext.Topics.Add(text.Topic);
                         }
                         break;
                     case "priority":
@@ -196,6 +200,126 @@ namespace Converter.Service
             }
 
             return instance;
+        }
+
+        public long LinksCount() {
+            return _links.CountDocuments(new BsonDocument());
+        }
+
+        public LinkItem GetLinkAt(int index, SefariaSQLiteConversionContext targetContext) {
+            LinkItem link = new LinkItem();
+            link.LinkGroup = new LinkGroup();
+            
+            BsonDocument value = _links.Find(_ => true).Skip(index).FirstOrDefault();
+            string PrimaryTopic = null;
+            string SecondaryTopic = null;
+            BsonValue availableLangs = null;
+            foreach (var element in value.Elements)
+            {
+                switch (element.Name)
+                {
+                    case "availableLangs":
+                        availableLangs = element.Value;
+                        break;
+                    case "expandedRefs0":
+                        PrimaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
+                        break;
+                    case "expandedRefs1":
+                        SecondaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
+                        break;
+                    default:
+                        break;
+
+                }
+            }
+            var primaryTopicSeperator = PrimaryTopic.LastIndexOf(' ');
+            string primaryTopicName = PrimaryTopic.Substring(0, primaryTopicSeperator);
+            string primaryTopicLocation = PrimaryTopic.Substring(primaryTopicSeperator + 1);
+            int primaryTopicId = targetContext.Topics.Where(t => t.Name == primaryTopicName).Select(t => t.Id).FirstOrDefault();
+
+            var secondaryTopicSeperator = SecondaryTopic.LastIndexOf(' ');
+            string secondaryTopicName = SecondaryTopic.Substring(0, secondaryTopicSeperator);
+            string secondaryTopicLocation = SecondaryTopic.Substring(secondaryTopicSeperator + 1);
+            int secondaryTopicId = targetContext.Topics.Where(t => t.Name == secondaryTopicLocation).Select(t => t.Id).FirstOrDefault();
+
+            link.PrimaryLocation = primaryTopicLocation;
+            link.SecondaryLocation = secondaryTopicLocation;
+
+            bool isLinkGroupNew = false;
+            if (primaryTopicId != 0 && secondaryTopicId != 0)
+            {
+                link.LinkGroup = targetContext.LinkGroups.Where(lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId).FirstOrDefault();
+                if (link.LinkGroup == null) {
+                    isLinkGroupNew = true;
+                    link.LinkGroup = new LinkGroup();
+                    link.LinkGroup.PrimaryTopicId = primaryTopicId;
+                    link.LinkGroup.SecondaryTopicId = secondaryTopicId;
+                }
+            }
+
+            if (availableLangs.IsBsonArray) {
+
+                if (!isLinkGroupNew) {
+                    link.LinkGroup.LinkedLanguages = targetContext.LinkLanguages.Where(l => l.LinkGroupId == link.LinkGroupId).ToList();
+                }
+                if (link.LinkGroup.LinkedLanguages == null) {
+                    link.LinkGroup.LinkedLanguages = new List<LinkLanguage>();
+                }
+                foreach (var item in availableLangs.AsBsonArray[0].AsBsonArray)
+                {
+                    LinkLanguage linkLanguage = null;
+                    int languageId = GetLanguageIdByString(item.AsString);
+                    linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == primaryTopicId && l.LanguageId == languageId).FirstOrDefault();
+                    if (linkLanguage == null)
+                    {
+                        linkLanguage = new LinkLanguage();
+                        linkLanguage.LinkGroup = link.LinkGroup;
+                        linkLanguage.LanguageId = languageId;
+                        linkLanguage.TopicId = primaryTopicId;
+                        link.LinkGroup.LinkedLanguages.Add(linkLanguage);
+                    }
+                    linkLanguage.Count++;
+                }
+                foreach (var item in availableLangs.AsBsonArray[1].AsBsonArray)
+                {
+                    LinkLanguage linkLanguage = null;
+                    int languageId = GetLanguageIdByString(item.AsString);
+                    linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == secondaryTopicId && l.LanguageId == languageId).FirstOrDefault();
+                    if (linkLanguage == null)
+                    {
+                        linkLanguage = new LinkLanguage();
+                        linkLanguage.LinkGroup = link.LinkGroup;
+                        linkLanguage.LanguageId = languageId;
+                        linkLanguage.TopicId = secondaryTopicId;
+                        link.LinkGroup.LinkedLanguages.Add(linkLanguage);
+                    }
+                    linkLanguage.Count++;
+                }
+            }
+
+            return link;
+        }
+
+        private int GetLanguageIdByString(string value) {
+            int result = (int)LanguageTypes.Undefined;
+            switch (value.ToLower())
+            {
+                case "he":
+                    result = (int)LanguageTypes.Hebrew;
+                    break;
+                case "en":
+                    result = (int)LanguageTypes.English;
+                    break;
+            }
+
+            return result;
+        }
+
+        private T FindFirstOrDefaultWhere<T>(DbSet<T> target, Func<T, bool> predicate) where T: class
+        {
+            var resultLocal = target.Local.Where(predicate).FirstOrDefault();
+            if (resultLocal != null) return resultLocal; 
+            return target.Where(predicate).FirstOrDefault();
         }
 
         //public void Dispose() {

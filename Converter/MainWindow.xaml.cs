@@ -56,15 +56,16 @@ namespace Converter
                     convert.IsEnabled = !isActive;
                     float percent = MathF.Floor(((Complete + 1) / Total) * 1000) / 10;
 
-                    float countTime = MathF.Floor((DateTime.Now.Ticks - TrackingStartTime) / 10000000);
-                    float remainTime = (countTime / (Complete / Total)) - countTime;
+                    //float countTime = MathF.Floor((DateTime.Now.Ticks - TrackingStartTime) / 10000000);
+                    long countTime = DateTime.Now.Ticks - TrackingStartTime;
+                    long remainTime = Complete!=0?((long)(countTime / (Complete / Total))) - countTime:0;
 
                     /**
                      * 3*.333 = 1
                      * 3/.333 = 9 - 3
                      */
 
-                    textBlock.Text = $"Processed {Complete + 1}/{Total} ({percent.ToString("0.0")}%), Time Elapsed: {countTime} Remaining: {remainTime.ToString("0.0")}";
+                    textBlock.Text = $"Processed {Complete + 1}/{Total} ({percent.ToString("0.0")}%), Time Elapsed: {new DateTime(countTime).ToString("mm:ss.f")} Remaining: {new DateTime(remainTime).ToString("H:mm:ss.f")}";
 
                     Trace.WriteLine(bufferText);
                     logTxt.Text += bufferText;
@@ -124,12 +125,14 @@ namespace Converter
 
             //Processing Texts
             var totalTexts = Total = _serviceMongo.TextsCount();
+            Log($"Processing: Texts #{totalTexts}");
             for (int i = 0; i < totalTexts; i++)
             {
                 var txt = _serviceMongo.GetTextAt(i, _serviceSQLite);
+                var test = _serviceSQLite.Texts.Local;
                 _serviceSQLite.AddAsync(txt);
 
-                if (i % 260 == 0 || txt.TopicId == 0)
+                if (i % 260 == 0 )
                 {
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
@@ -139,6 +142,32 @@ namespace Converter
                 //Log($"Processing: index {i} / total {totalTexts}");
             }
             Complete++;
+
+            var totalLinks = Total = _serviceMongo.LinksCount();
+            Log($"Processing: Links #{totalLinks}");
+            for (int i = 0; i < totalLinks; i++)
+            {
+                var link = _serviceMongo.GetLinkAt(i, _serviceSQLite);
+                _serviceSQLite.AddAsync(link);
+
+                bool hasNew = false;
+                if (link.LinkGroup.Id == 0) {
+                    hasNew = true;
+                }
+                foreach (var item in link.LinkGroup.LinkedLanguages)
+                {
+                    if (item.Id == 0) {
+                        hasNew = true;
+                    }
+                }
+
+                if (hasNew) {
+                    _serviceSQLite.SaveChanges();
+                    _serviceSQLite.DisposeAsync();
+                    _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+                }
+                Complete = i;
+            }
             _serviceSQLite.SaveChanges();
             _serviceSQLite.Dispose();
             
