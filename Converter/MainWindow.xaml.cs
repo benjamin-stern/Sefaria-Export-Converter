@@ -58,19 +58,17 @@ namespace Converter
 
                     //float countTime = MathF.Floor((DateTime.Now.Ticks - TrackingStartTime) / 10000000);
                     long countTime = DateTime.Now.Ticks - TrackingStartTime;
-                    long remainTime = Complete!=0?((long)(countTime / (Complete / Total))) - countTime:0;
+                    //long remainTime = Complete!=0?((long)(countTime / (Complete / Total))) - countTime:0;
 
-                    /**
-                     * 3*.333 = 1
-                     * 3/.333 = 9 - 3
-                     */
+                    textBlock.Text = $"Processed {Complete + 1}/{Total} ({percent.ToString("0.0")}%), Time Elapsed: {new DateTime(countTime).ToString("H:mm:ss.f")}";
 
-                    textBlock.Text = $"Processed {Complete + 1}/{Total} ({percent.ToString("0.0")}%), Time Elapsed: {new DateTime(countTime).ToString("mm:ss.f")} Remaining: {new DateTime(remainTime).ToString("H:mm:ss.f")}";
-
-                    Trace.WriteLine(bufferText);
-                    logTxt.Text += bufferText;
-                    logTxt.ScrollToEnd();
-                    bufferText = "";
+                    if (!string.IsNullOrEmpty(bufferText))
+                    {
+                        Trace.WriteLine(bufferText);
+                        logTxt.Text += bufferText;
+                        logTxt.ScrollToEnd();
+                        bufferText = "";
+                    }
                 }
             }));
             
@@ -132,7 +130,7 @@ namespace Converter
                 var test = _serviceSQLite.Texts.Local;
                 _serviceSQLite.AddAsync(txt);
 
-                if (i % 260 == 0 )
+                if (i % 130 == 0 )
                 {
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
@@ -150,18 +148,18 @@ namespace Converter
                 var link = _serviceMongo.GetLinkAt(i, _serviceSQLite);
                 _serviceSQLite.AddAsync(link);
 
-                bool hasNew = false;
-                if (link.LinkGroup.Id == 0) {
-                    hasNew = true;
-                }
-                foreach (var item in link.LinkGroup.LinkedLanguages)
-                {
-                    if (item.Id == 0) {
-                        hasNew = true;
-                    }
-                }
+                //bool hasNew = false;
+                //if (link.LinkGroup.Id == 0) {
+                //    hasNew = true;
+                //}
+                //foreach (var item in link.LinkGroup.LinkedLanguages)
+                //{
+                //    if (item.Id == 0) {
+                //        hasNew = true;
+                //    }
+                //}
 
-                if (hasNew) {
+                if (i%520==0) {
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
                     _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });

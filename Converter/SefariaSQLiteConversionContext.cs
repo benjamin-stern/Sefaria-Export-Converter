@@ -1,7 +1,9 @@
 ﻿using Converter.Model.SQLite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Converter
@@ -29,6 +31,58 @@ namespace Converter
             base.OnModelCreating(modelBuilder);
 
             //modelBuilder.Entity<Text>().HasKey(t=>t.Id);
+        }
+
+        private Dictionary<Type, object> _trackedList = new Dictionary<Type, object>();
+
+        public T FindFirstOrDefaultWhere<T>(DbSet<T> target, Func<T, bool> predicate) where T : class
+        {
+            var localList = (_trackedList.GetValueOrDefault(typeof(T)) as List<T>) ?? new List<T>();
+            //if (localList == null)
+            //{
+            //    localList = target.Local;
+            //    _trackedList.Add(typeof(T), localList);
+            //}
+            var resultLocal = localList.Where(predicate).FirstOrDefault();
+            if(resultLocal != null) return resultLocal;
+
+            var resultDb = target.Where(predicate).FirstOrDefault();
+            return resultDb;
+        }
+
+        public List<T> FindListWhere<T>(DbSet<T> target, Func<T, bool> predicate) where T : class
+        {
+            List<T> result = new List<T>();
+            var localList = (_trackedList.GetValueOrDefault(typeof(T)) as List<T>) ?? new List<T>();
+            var resultLocal = localList.Where(predicate).ToList();
+            result = result.Concat(resultLocal);
+
+            var resultDb = target.Where(predicate).ToList();
+            result = result.Concat(resultDb);
+            return result;
+        }
+
+        private List<Type> _typesChanged = new List<Type>();
+        public EntityEntry<T> Add<T>(DbSet<T> target, T item) where T : class
+        {
+            Type type = typeof(T);
+
+            if (!_typesChanged.Contains(type)) {
+                _typesChanged.Add(type);
+                _trackedList.Add(type, new List<T>());
+            }
+            ((List<T>)_trackedList.GetValueOrDefault(type))?.Add(item);
+            return target.Add(item);
+        }
+
+        public override int SaveChanges()
+        {
+            _typesChanged.ForEach(t =>
+            {
+                _trackedList.Remove(t);
+            });
+            _typesChanged.RemoveAll(_=>true);
+            return base.SaveChanges();
         }
     }
 }
