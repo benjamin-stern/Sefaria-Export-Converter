@@ -37,13 +37,16 @@ namespace Converter
 
         public T FindFirstOrDefaultWhere<T>(DbSet<T> target, Func<T, bool> predicate) where T : class
         {
-            var localList = (_trackedList.GetValueOrDefault(typeof(T)) as List<T>) ?? new List<T>();
-            //if (localList == null)
-            //{
-            //    localList = target.Local;
-            //    _trackedList.Add(typeof(T), localList);
-            //}
-            var resultLocal = localList.Where(predicate).FirstOrDefault();
+            //var localList = (_trackedList.GetValueOrDefault(typeof(T)) as List<T>) ?? new List<T>();
+            ////if (localList == null)
+            ////{
+            ////    localList = target.Local;
+            ////    _trackedList.Add(typeof(T), localList);
+            ////}
+            //var resultLocal = localList.Where(predicate).FirstOrDefault();
+            //if(resultLocal != null) return resultLocal;
+
+            var resultLocal = FindTrackedFirstOrDefaultWhere(target, predicate);
             if(resultLocal != null) return resultLocal;
 
             var resultDb = target.Where(predicate).FirstOrDefault();
@@ -55,11 +58,18 @@ namespace Converter
             List<T> result = new List<T>();
             var localList = (_trackedList.GetValueOrDefault(typeof(T)) as List<T>) ?? new List<T>();
             var resultLocal = localList.Where(predicate).ToList();
-            result = result.Concat(resultLocal);
+            result = result.Concat(resultLocal).ToList();
 
             var resultDb = target.Where(predicate).ToList();
-            result = result.Concat(resultDb);
+            result = result.Concat(resultDb).ToList();
             return result;
+        }
+
+        public T FindTrackedFirstOrDefaultWhere<T>(DbSet<T> target, Func<T, bool> predicate) where T : class
+        {
+            var localList = (_trackedList.GetValueOrDefault(typeof(T)) as List<T>) ?? new List<T>();
+            var resultLocal = localList.Where(predicate).FirstOrDefault();
+            return resultLocal;
         }
 
         private List<Type> _typesChanged = new List<Type>();

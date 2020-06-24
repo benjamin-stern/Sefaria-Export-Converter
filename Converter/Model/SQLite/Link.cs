@@ -17,7 +17,11 @@ namespace Converter.Model.SQLite
         public string SecondaryLocation { get; set; }
     }
 
-    public class LinkGroup{
+    public class LinkGroup {
+        public LinkGroup() {
+            LinkedLanguages = new List<LinkLanguage>();
+        }
+
         public int Id { get; set; }
         [ForeignKey("Topic")]
         public int PrimaryTopicId { get; set; }

@@ -248,7 +248,12 @@ namespace Converter.Service
             bool isLinkGroupNew = false;
             if (primaryTopicId != 0 && secondaryTopicId != 0)
             {
-                link.LinkGroup = targetContext.FindFirstOrDefaultWhere(targetContext.LinkGroups, (lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId));
+                link.LinkGroup = targetContext.FindTrackedFirstOrDefaultWhere(targetContext.LinkGroups, (lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId));
+                if (link.LinkGroup == null) {
+                    link.LinkGroup = targetContext.LinkGroups
+                        .Where(lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId)
+                        .Include(lg => lg.LinkedLanguages).FirstOrDefault();
+                }
                 if (link.LinkGroup == null)
                 {
                     isLinkGroupNew = true;
@@ -259,21 +264,9 @@ namespace Converter.Service
                     };
                     targetContext.Add(targetContext.LinkGroups, link.LinkGroup);
                 }
-
+                
                 if (availableLangs.IsBsonArray)
                 {
-                    //May not be necessary should be retrieved from the LinkGroup Automatically
-                    //if (!isLinkGroupNew)
-                    //{
-                    //    //link.LinkGroup.LinkedLanguages = targetContext
-                    //    //    .LinkLanguages
-                    //    //    .Where(l => l.LinkGroup == link.LinkGroup)
-                    //    //    .Concat(targetContext.LinkLanguages
-                    //    //        .Local
-                    //    //        .Where(l => l.LinkGroup == link.LinkGroup))
-                    //    //    .ToList();
-
-                    //}
                     if (link.LinkGroup.LinkedLanguages == null)
                     {
                         link.LinkGroup.LinkedLanguages = new List<LinkLanguage>();
@@ -282,8 +275,8 @@ namespace Converter.Service
                     {
                         LinkLanguage linkLanguage = null;
                         int languageId = GetLanguageIdByString(item.AsString);
-                        linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == primaryTopicId && l.LanguageId == languageId));
-                        //linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == primaryTopicId && l.LanguageId == languageId).FirstOrDefault();
+                        //linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == primaryTopicId && l.LanguageId == languageId));
+                        linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == primaryTopicId && l.LanguageId == languageId).FirstOrDefault();
                         if (linkLanguage == null)
                         {
                             linkLanguage = new LinkLanguage
@@ -301,8 +294,8 @@ namespace Converter.Service
                     {
                         LinkLanguage linkLanguage = null;
                         int languageId = GetLanguageIdByString(item.AsString);
-                        linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == secondaryTopicId && l.LanguageId == languageId));
-                        //linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == secondaryTopicId && l.LanguageId == languageId).FirstOrDefault();
+                        //linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == secondaryTopicId && l.LanguageId == languageId));
+                        linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == secondaryTopicId && l.LanguageId == languageId).FirstOrDefault();
                         if (linkLanguage == null)
                         {
                             linkLanguage = new LinkLanguage
