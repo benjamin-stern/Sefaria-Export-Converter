@@ -146,7 +146,7 @@ namespace Converter
             for (int i = 0; i < totalLinks; i++)
             {
                 var link = _serviceMongo.GetLinkAt(i, _serviceSQLite);
-                _serviceSQLite.AddAsync(link);
+                if(link != null) _serviceSQLite.AddAsync(link);
 
                 //bool hasNew = false;
                 //if (link.LinkGroup.Id == 0) {

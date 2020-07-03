@@ -216,6 +216,7 @@ namespace Converter.Service
             BsonValue availableLangs = null;
             foreach (var element in value.Elements)
             {
+                //Need to fix for { "_id" : ObjectId("51de8ce8edbab4523cea399f")}
                 switch (element.Name)
                 {
                     case "availableLangs":
@@ -227,11 +228,23 @@ namespace Converter.Service
                     case "expandedRefs1":
                         SecondaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
                         break;
+                    case "refs":
+                        var refs = element.Value.AsBsonArray.Values.ToList();
+                        if (refs != null && refs.Count >= 2) {
+                            PrimaryTopic = refs[0].AsString;
+                            SecondaryTopic = refs[1].AsString;
+                        }
+                        break;
                     default:
                         break;
 
                 }
             }
+
+            if (PrimaryTopic == null || SecondaryTopic == null) {
+                return null;
+            }
+
             var primaryTopicSeperator = PrimaryTopic.LastIndexOf(' ');
             string primaryTopicName = PrimaryTopic.Substring(0, primaryTopicSeperator);
             string primaryTopicLocation = PrimaryTopic.Substring(primaryTopicSeperator + 1);
@@ -265,7 +278,7 @@ namespace Converter.Service
                     targetContext.Add(targetContext.LinkGroups, link.LinkGroup);
                 }
                 
-                if (availableLangs.IsBsonArray)
+                if (availableLangs != null && availableLangs.IsBsonArray)
                 {
                     if (link.LinkGroup.LinkedLanguages == null)
                     {
