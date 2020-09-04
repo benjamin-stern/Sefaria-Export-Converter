@@ -130,7 +130,7 @@ namespace Converter
                 var test = _serviceSQLite.Texts.Local;
                 _serviceSQLite.AddAsync(txt);
 
-                if (i % 130 == 0 )
+                if (i % 260 == 0)
                 {
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
@@ -141,13 +141,22 @@ namespace Converter
             }
             Complete++;
 
-            var totalLinks = Total = _serviceMongo.LinksCount();
-            Log($"Processing: Links #{totalLinks}");
-            for (int i = 0; i < totalLinks; i++)
-            {
-                var link = _serviceMongo.GetLinkAt(i, _serviceSQLite);
-                if(link != null) _serviceSQLite.AddAsync(link);
+            _serviceSQLite.SaveChanges();
+            _serviceSQLite.DisposeAsync();
+            _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
 
+
+            var totalLinks = Total = _serviceMongo.LinksCount();
+            var linksList = _serviceMongo.GetLinks();
+            Log($"Processing: Links #{totalLinks}");
+            for (int i = 0; i < linksList.Count; i++)
+            {
+                var processing = linksList[i];
+                if (processing != null)
+                {
+                    var link = _serviceMongo.ParseLink(processing, _serviceSQLite);
+                    if (link != null) _serviceSQLite.AddAsync(link);
+                }
                 //bool hasNew = false;
                 //if (link.LinkGroup.Id == 0) {
                 //    hasNew = true;
@@ -159,16 +168,17 @@ namespace Converter
                 //    }
                 //}
 
-                if (i%520==0) {
-                    _serviceSQLite.SaveChanges();
-                    _serviceSQLite.DisposeAsync();
-                    _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
-                }
+                //if (i%520==0) {
+                //    _serviceSQLite.SaveChanges();
+                //    _serviceSQLite.DisposeAsync();
+                //    _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+                //}
                 Complete = i;
             }
             _serviceSQLite.SaveChanges();
             _serviceSQLite.Dispose();
-            
+            _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+
             isActive = false;
         }
 

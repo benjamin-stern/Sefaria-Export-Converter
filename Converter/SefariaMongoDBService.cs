@@ -206,126 +206,156 @@ namespace Converter.Service
             return _links.CountDocuments(new BsonDocument());
         }
 
-        public LinkItem GetLinkAt(int index, SefariaSQLiteConversionContext targetContext) {
-            LinkItem link = new LinkItem();
-            link.LinkGroup = new LinkGroup();
-            
-            BsonDocument value = _links.Find(_ => true).Skip(index).FirstOrDefault();
-            string PrimaryTopic = null;
-            string SecondaryTopic = null;
-            BsonValue availableLangs = null;
-            foreach (var element in value.Elements)
+        public List<BsonDocument> GetLinks() {
+            return _links.Find(_ => true).ToList();
+        }
+
+        public LinkItem ParseLink(BsonDocument value, SefariaSQLiteConversionContext targetContext) {
+            try
             {
-                //Need to fix for { "_id" : ObjectId("51de8ce8edbab4523cea399f")}
-                switch (element.Name)
+                LinkItem link = new LinkItem();
+                link.LinkGroup = new LinkGroup();
+
+                //BsonDocument value = _links.Find(_ => true).Skip(index).FirstOrDefault();
+                string PrimaryTopic = null;
+                string SecondaryTopic = null;
+                BsonValue availableLangs = null;
+                foreach (var element in value.Elements)
                 {
-                    case "availableLangs":
-                        availableLangs = element.Value;
-                        break;
-                    case "expandedRefs0":
-                        PrimaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
-                        break;
-                    case "expandedRefs1":
-                        SecondaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
-                        break;
-                    case "refs":
-                        var refs = element.Value.AsBsonArray.Values.ToList();
-                        if (refs != null && refs.Count >= 2) {
-                            PrimaryTopic = refs[0].AsString;
-                            SecondaryTopic = refs[1].AsString;
-                        }
-                        break;
-                    default:
-                        break;
-
-                }
-            }
-
-            if (PrimaryTopic == null || SecondaryTopic == null) {
-                return null;
-            }
-
-            var primaryTopicSeperator = PrimaryTopic.LastIndexOf(' ');
-            string primaryTopicName = PrimaryTopic.Substring(0, primaryTopicSeperator);
-            string primaryTopicLocation = PrimaryTopic.Substring(primaryTopicSeperator + 1);
-            int primaryTopicId = targetContext.Topics.Where(t => t.Name == primaryTopicName).Select(t => t.Id).FirstOrDefault();
-
-            var secondaryTopicSeperator = SecondaryTopic.LastIndexOf(' ');
-            string secondaryTopicName = SecondaryTopic.Substring(0, secondaryTopicSeperator);
-            string secondaryTopicLocation = SecondaryTopic.Substring(secondaryTopicSeperator + 1);
-            int secondaryTopicId = targetContext.Topics.Where(t => t.Name == secondaryTopicName).Select(t => t.Id).FirstOrDefault();
-
-            link.PrimaryLocation = primaryTopicLocation;
-            link.SecondaryLocation = secondaryTopicLocation;
-
-            bool isLinkGroupNew = false;
-            if (primaryTopicId != 0 && secondaryTopicId != 0)
-            {
-                link.LinkGroup = targetContext.FindTrackedFirstOrDefaultWhere(targetContext.LinkGroups, (lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId));
-                if (link.LinkGroup == null) {
-                    link.LinkGroup = targetContext.LinkGroups
-                        .Where(lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId)
-                        .Include(lg => lg.LinkedLanguages).FirstOrDefault();
-                }
-                if (link.LinkGroup == null)
-                {
-                    isLinkGroupNew = true;
-                    link.LinkGroup = new LinkGroup
+                    try
                     {
-                        PrimaryTopicId = primaryTopicId,
-                        SecondaryTopicId = secondaryTopicId
-                    };
-                    targetContext.Add(targetContext.LinkGroups, link.LinkGroup);
-                }
-                
-                if (availableLangs != null && availableLangs.IsBsonArray)
-                {
-                    if (link.LinkGroup.LinkedLanguages == null)
-                    {
-                        link.LinkGroup.LinkedLanguages = new List<LinkLanguage>();
-                    }
-                    foreach (var item in availableLangs.AsBsonArray[0].AsBsonArray)
-                    {
-                        LinkLanguage linkLanguage = null;
-                        int languageId = GetLanguageIdByString(item.AsString);
-                        //linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == primaryTopicId && l.LanguageId == languageId));
-                        linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == primaryTopicId && l.LanguageId == languageId).FirstOrDefault();
-                        if (linkLanguage == null)
+                        //Need to fix for { "_id" : ObjectId("51de8ce8edbab4523cea399f")}
+                        switch (element.Name)
                         {
-                            linkLanguage = new LinkLanguage
-                            {
-                                LinkGroup = link.LinkGroup,
-                                LanguageId = languageId,
-                                TopicId = primaryTopicId
-                            };
-                            link.LinkGroup.LinkedLanguages.Add(linkLanguage);
-                            targetContext.Add(targetContext.LinkLanguages, linkLanguage);
+                            case "availableLangs":
+                                availableLangs = element.Value;
+                                break;
+                            case "expandedRefs0":
+                                PrimaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
+                                break;
+                            case "expandedRefs1":
+                                SecondaryTopic = element.Value.AsBsonArray.Values.ToList()[0].AsString;
+                                break;
+                            case "refs":
+                                var refs = element.Value.AsBsonArray.Values.ToList();
+                                if (refs != null && refs.Count >= 2)
+                                {
+                                    PrimaryTopic = refs[0].AsString;
+                                    SecondaryTopic = refs[1].AsString;
+                                }
+                                break;
+                            default:
+                                break;
+
                         }
-                        linkLanguage.Count++;
                     }
-                    foreach (var item in availableLangs.AsBsonArray[1].AsBsonArray)
+                    catch (Exception e)
                     {
-                        LinkLanguage linkLanguage = null;
-                        int languageId = GetLanguageIdByString(item.AsString);
-                        //linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == secondaryTopicId && l.LanguageId == languageId));
-                        linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == secondaryTopicId && l.LanguageId == languageId).FirstOrDefault();
-                        if (linkLanguage == null)
+                        string json = value?.ToString()??"";
+                        Console.WriteLine($"GetLinkAt {json}, element: {element.Name}, Exception: {e}");
+                    }
+
+                }
+
+                if (PrimaryTopic == null || SecondaryTopic == null)
+                {
+                    return null;
+                }
+
+                var primaryTopicSeperator = PrimaryTopic.LastIndexOf(' ');
+                string primaryTopicName = PrimaryTopic.Substring(0, primaryTopicSeperator);
+                string primaryTopicLocation = PrimaryTopic.Substring(primaryTopicSeperator + 1);
+                int primaryTopicId = targetContext.Topics.Where(t => t.Name == primaryTopicName).Select(t => t.Id).FirstOrDefault();
+
+                var secondaryTopicSeperator = SecondaryTopic.LastIndexOf(' ');
+                string secondaryTopicName = SecondaryTopic.Substring(0, secondaryTopicSeperator);
+                string secondaryTopicLocation = SecondaryTopic.Substring(secondaryTopicSeperator + 1);
+                int secondaryTopicId = targetContext.Topics.Where(t => t.Name == secondaryTopicName).Select(t => t.Id).FirstOrDefault();
+
+                link.PrimaryLocation = primaryTopicLocation;
+                link.SecondaryLocation = secondaryTopicLocation;
+
+                bool isLinkGroupNew = false;
+                if (primaryTopicId != 0 && secondaryTopicId != 0)
+                {
+                    link.LinkGroup = targetContext.FindTrackedFirstOrDefaultWhere(targetContext.LinkGroups, (lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId));
+                    if (link.LinkGroup == null)
+                    {
+                        link.LinkGroup = targetContext.LinkGroups
+                            .Where(lg => lg.PrimaryTopicId == primaryTopicId && lg.SecondaryTopicId == secondaryTopicId)
+                            .Include(lg => lg.LinkedLanguages).FirstOrDefault();
+                    }
+                    if (link.LinkGroup == null)
+                    {
+                        isLinkGroupNew = true;
+                        link.LinkGroup = new LinkGroup
                         {
-                            linkLanguage = new LinkLanguage
-                            {
-                                LinkGroup = link.LinkGroup,
-                                LanguageId = languageId,
-                                TopicId = secondaryTopicId
-                            };
-                            link.LinkGroup.LinkedLanguages.Add(linkLanguage);
-                            targetContext.Add(targetContext.LinkLanguages, linkLanguage);
+                            PrimaryTopicId = primaryTopicId,
+                            SecondaryTopicId = secondaryTopicId
+                        };
+                        targetContext.Add(targetContext.LinkGroups, link.LinkGroup);
+                    }
+
+                    if (availableLangs != null && availableLangs.IsBsonArray)
+                    {
+                        if (link.LinkGroup.LinkedLanguages == null)
+                        {
+                            link.LinkGroup.LinkedLanguages = new List<LinkLanguage>();
                         }
-                        linkLanguage.Count++;
+                        if (availableLangs.AsBsonArray.Count >= 1 && availableLangs.AsBsonArray[0].IsBsonArray)
+                        {
+                            foreach (var item in availableLangs.AsBsonArray[0].AsBsonArray)
+                            {
+                                LinkLanguage linkLanguage = null;
+                                int languageId = GetLanguageIdByString(item.AsString);
+                                //linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == primaryTopicId && l.LanguageId == languageId));
+                                linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == primaryTopicId && l.LanguageId == languageId).FirstOrDefault();
+                                if (linkLanguage == null)
+                                {
+                                    linkLanguage = new LinkLanguage
+                                    {
+                                        LinkGroup = link.LinkGroup,
+                                        LanguageId = languageId,
+                                        TopicId = primaryTopicId
+                                    };
+                                    link.LinkGroup.LinkedLanguages.Add(linkLanguage);
+                                    targetContext.Add(targetContext.LinkLanguages, linkLanguage);
+                                }
+                                linkLanguage.Count++;
+                            }
+                        }
+                        if (availableLangs.AsBsonArray.Count >= 2 && availableLangs.AsBsonArray[1].IsBsonArray)
+                        {
+                            foreach (var item in availableLangs.AsBsonArray[1].AsBsonArray)
+                            {
+                                LinkLanguage linkLanguage = null;
+                                int languageId = GetLanguageIdByString(item.AsString);
+                                //linkLanguage = targetContext.FindFirstOrDefaultWhere(targetContext.LinkLanguages, (l => l.LinkGroup == link.LinkGroup && l.TopicId == secondaryTopicId && l.LanguageId == languageId));
+                                linkLanguage = link.LinkGroup.LinkedLanguages.Where(l => l.TopicId == secondaryTopicId && l.LanguageId == languageId).FirstOrDefault();
+                                if (linkLanguage == null)
+                                {
+                                    linkLanguage = new LinkLanguage
+                                    {
+                                        LinkGroup = link.LinkGroup,
+                                        LanguageId = languageId,
+                                        TopicId = secondaryTopicId
+                                    };
+                                    link.LinkGroup.LinkedLanguages.Add(linkLanguage);
+                                    targetContext.Add(targetContext.LinkLanguages, linkLanguage);
+                                }
+                                linkLanguage.Count++;
+                            }
+                        }
                     }
                 }
+
+                return link;
+            }
+            catch (Exception ex) {
+                Console.WriteLine($"GetLinkAt: Exception: {ex}");
             }
 
-            return link;
+            return null;
         }
 
         private int GetLanguageIdByString(string value) {
