@@ -99,11 +99,21 @@ namespace Converter.Service
             return _texts.CountDocuments(new BsonDocument()); 
         }
 
-        public Text GetTextAt(int index, SefariaSQLiteConversionContext targetContext) {
+        public List<BsonDocument> GetTexts(int startLocation, int amount) {
+            var result = new List<BsonDocument>();
+            if (startLocation < TextsCount()) {
+                result = _texts.Find(_ => true).Skip(startLocation).Limit(amount).ToList();
+            }
+            
+            return result;
+        }
+
+        public Text ParseText(BsonDocument value, SefariaSQLiteConversionContext targetContext) {
             Text text = new Text();
             LabelGroup versionTitleLG = new LabelGroup();
             versionTitleLG.Labels = new List<Label>();
-            BsonDocument value = _texts.Find(_ => true).Skip(index).FirstOrDefault();
+            //BsonDocument value = _texts.Find(_ => true).Skip(index).FirstOrDefault();
+
             foreach (var element in value.Elements)
             {
                 switch (element.Name)
@@ -161,8 +171,25 @@ namespace Converter.Service
                     
                 }
             }
-            
+
+            text.ChapterCount = CountChapters(text.Chapter);
+
             return text;
+        }
+
+        private int CountChapters(Chapter c) {
+            int count = 0;
+            if (c != null) {
+                count += 1;
+                if (c.Children != null)
+                {
+                    foreach (var item in c.Children)
+                    {
+                        count += CountChapters(item);
+                    }
+                }
+            }
+            return count;
         }
 
         private Chapter GenerateChapterTree(BsonValue value, Chapter parent = null, int index = 1)
@@ -171,6 +198,9 @@ namespace Converter.Service
             if (parent != null) {
                 instance.ParentChapter = parent;
             }
+
+            //To recreate fast Lookup Path
+            instance.Path = (parent!=null? parent.Index.ToString()+":":"")+instance.Index.ToString();
 
             switch (value.BsonType) {
                 case BsonType.Array:
@@ -192,7 +222,6 @@ namespace Converter.Service
                         child.Text = element.Name;
                         instance.Children.Add(child);
                     }
-                    
                     break;
                 case BsonType.String:
                     instance.Text = value.AsString;
@@ -206,15 +235,26 @@ namespace Converter.Service
             return _links.CountDocuments(new BsonDocument());
         }
 
-        public List<BsonDocument> GetLinks() {
+        public List<BsonDocument> GetLinks()
+        {
             return _links.Find(_ => true).ToList();
+        }
+
+        public List<BsonDocument> GetLinks(int startLocation, int amount) {
+            var result = new List<BsonDocument>();
+            if (startLocation < LinksCount())
+            {
+                result = _links.Find(_ => true).Skip(startLocation).Limit(amount).ToList();
+            }
+
+            return result;
         }
 
         public LinkItem ParseLink(BsonDocument value, SefariaSQLiteConversionContext targetContext) {
             try
             {
                 LinkItem link = new LinkItem();
-                link.LinkGroup = new LinkGroup();
+                //link.LinkGroup = new LinkGroup();
 
                 //BsonDocument value = _links.Find(_ => true).Skip(index).FirstOrDefault();
                 string PrimaryTopic = null;
@@ -347,6 +387,9 @@ namespace Converter.Service
                             }
                         }
                     }
+                }
+                else{
+                    link.DebugInfo = $"{PrimaryTopic}{((primaryTopicId==0)?" 'Not Found'":"")} _ {SecondaryTopic}{((secondaryTopicId == 0) ? " 'Not Found'" : "")}";
                 }
 
                 return link;

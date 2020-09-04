@@ -32,5 +32,7 @@ namespace Converter.Model.SQLite
         public int? ChapterId { get; set; }
         public Chapter Chapter { get; set; }
 
+        public int ChapterCount { get; set; }
+
     }
 }

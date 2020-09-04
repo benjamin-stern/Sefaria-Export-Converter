@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.IO;
 using System.Text;
 
 namespace Converter.Model.SQLite
@@ -16,6 +17,7 @@ namespace Converter.Model.SQLite
         public Chapter ParentChapter { get; set; }
         public ICollection<Chapter> Children { get; set; }
         public int Index { get; set; }
+        public string Path { get; set; }
         public string Text { get; set; }
 
         //TODO: Consider Adding a ChapterClonedText to reduce duplication...

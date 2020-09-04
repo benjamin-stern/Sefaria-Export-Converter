@@ -77,13 +77,29 @@ namespace Converter
         {
             Type type = typeof(T);
 
-            if (!_typesChanged.Contains(type)) {
+            if (!_typesChanged.Contains(type))
+            {
                 _typesChanged.Add(type);
                 _trackedList.Add(type, new List<T>());
             }
             ((List<T>)_trackedList.GetValueOrDefault(type))?.Add(item);
             return target.Add(item);
         }
+
+        //public EntityEntry<T> AddAsync<T>(DbSet<T> target, T item) where T : class
+        //{
+        //    Type type = typeof(T);
+
+        //    if (!_typesChanged.Contains(type))
+        //    {
+        //        _typesChanged.Add(type);
+        //        _trackedList.Add(type, new List<T>());
+        //    }
+        //    ((List<T>)_trackedList.GetValueOrDefault(type))?.Add(item);
+        //    return target.Add(item);
+        //}
+
+
 
         public override int SaveChanges()
         {

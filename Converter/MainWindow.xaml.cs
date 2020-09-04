@@ -1,5 +1,6 @@
 ﻿using Converter.Model.SQLite;
 using Converter.Service;
+using MongoDB.Bson;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -124,17 +125,29 @@ namespace Converter
             //Processing Texts
             var totalTexts = Total = _serviceMongo.TextsCount();
             Log($"Processing: Texts #{totalTexts}");
+            int textBatchAmount = 390;
+            List<BsonDocument> textParseList = new List<BsonDocument>();
             for (int i = 0; i < totalTexts; i++)
             {
-                var txt = _serviceMongo.GetTextAt(i, _serviceSQLite);
-                var test = _serviceSQLite.Texts.Local;
-                _serviceSQLite.AddAsync(txt);
+                if (textParseList.Count == 0)
+                {
+                    textParseList = _serviceMongo.GetTexts(i, textBatchAmount);
+                }
 
-                if (i % 260 == 0)
+                var raw = textParseList[0];
+                textParseList.RemoveAt(0);
+
+                var txt = _serviceMongo.ParseText(raw, _serviceSQLite);
+               //var test = _serviceSQLite.Texts.Local;
+                _serviceSQLite.Add(txt);
+
+                if (i % textBatchAmount == 0)
                 {
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
                     _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+                    //break;//For Testing Links
+
                 }
                 Complete = i;
                 //Log($"Processing: index {i} / total {totalTexts}");
@@ -145,34 +158,46 @@ namespace Converter
             _serviceSQLite.DisposeAsync();
             _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
 
-
+            const int linkBatchAmount = 52000;
             var totalLinks = Total = _serviceMongo.LinksCount();
-            var linksList = _serviceMongo.GetLinks();
+            List<BsonDocument> linksList = new List<BsonDocument>();
             Log($"Processing: Links #{totalLinks}");
-            for (int i = 0; i < linksList.Count; i++)
+            for (int i = 0; i < totalLinks; i++)
             {
-                var processing = linksList[i];
-                if (processing != null)
+                if (linksList.Count == 0)
                 {
-                    var link = _serviceMongo.ParseLink(processing, _serviceSQLite);
-                    if (link != null) _serviceSQLite.AddAsync(link);
+                    linksList = _serviceMongo.GetLinks(i, linkBatchAmount);
                 }
-                //bool hasNew = false;
-                //if (link.LinkGroup.Id == 0) {
-                //    hasNew = true;
-                //}
-                //foreach (var item in link.LinkGroup.LinkedLanguages)
-                //{
-                //    if (item.Id == 0) {
-                //        hasNew = true;
-                //    }
-                //}
 
-                //if (i%520==0) {
-                //    _serviceSQLite.SaveChanges();
-                //    _serviceSQLite.DisposeAsync();
-                //    _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
-                //}
+                if (linksList.Count > 0)
+                {
+                    var processing = linksList[0];
+                    linksList.RemoveAt(0);
+
+                    //var processing = linksList[i];
+                    if (processing != null)
+                    {
+                        var link = _serviceMongo.ParseLink(processing, _serviceSQLite);
+                        if (link != null) _serviceSQLite.Add(link);
+                    }
+                    //bool hasNew = false;
+                    //if (link.LinkGroup.Id == 0) {
+                    //    hasNew = true;
+                    //}
+                    //foreach (var item in link.LinkGroup.LinkedLanguages)
+                    //{
+                    //    if (item.Id == 0) {
+                    //        hasNew = true;
+                    //    }
+                    //}
+
+                    if (i % linkBatchAmount == 0)
+                    {
+                        _serviceSQLite.SaveChanges();
+                        _serviceSQLite.DisposeAsync();
+                        _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });
+                    }
+                }
                 Complete = i;
             }
             _serviceSQLite.SaveChanges();

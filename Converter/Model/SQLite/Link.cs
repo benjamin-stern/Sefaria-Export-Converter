@@ -11,10 +11,11 @@ namespace Converter.Model.SQLite
         [Key]
         public int Id { get; set; }
         [ForeignKey("LinkGroup")]
-        public int LinkGroupId { get; set; }
+        public int? LinkGroupId { get; set; }
         public LinkGroup LinkGroup { get; set; }
         public string PrimaryLocation { get; set; }
         public string SecondaryLocation { get; set; }
+        public string DebugInfo { get; set; }
     }
 
     public class LinkGroup {
