@@ -138,11 +138,20 @@ namespace Converter
                 textParseList.RemoveAt(0);
 
                 var txt = _serviceMongo.ParseText(raw, _serviceSQLite);
-               //var test = _serviceSQLite.Texts.Local;
-                _serviceSQLite.Add(txt);
+                //var test = _serviceSQLite.Texts.Local;
+                
+                _serviceSQLite.Add(_serviceSQLite.Texts,txt);
+                //_serviceSQLite.SaveChanges();
+                foreach (var chapter in _serviceMongo.ListChapters(txt.Chapter))
+                {
+                    chapter.TopicText = txt;
+                    _serviceSQLite.Add(_serviceSQLite.Chapters, chapter);
+                }
 
                 if (i % textBatchAmount == 0)
                 {
+                    //_serviceSQLite.SaveChanges();
+                    //_serviceSQLite.ChangeTracker.DetectChanges();
                     _serviceSQLite.SaveChanges();
                     _serviceSQLite.DisposeAsync();
                     _serviceSQLite = new SefariaSQLiteConversionContext(new Microsoft.EntityFrameworkCore.DbContextOptions<SefariaSQLiteConversionContext> { });

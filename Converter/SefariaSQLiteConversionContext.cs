@@ -17,6 +17,7 @@ namespace Converter
         public DbSet<LabelGroup> LabelGroups { get; set; }
         public DbSet<Label> Labels { get; set; }
         public DbSet<Text> Texts { get; set; }
+        public DbSet<Chapter> Chapters { get; set; }
         public DbSet<Topic> Topics { get; set; }
         public DbSet<LinkItem> Links { get; set; }
         public DbSet<LinkGroup> LinkGroups { get; set; }
@@ -31,6 +32,9 @@ namespace Converter
             base.OnModelCreating(modelBuilder);
 
             //modelBuilder.Entity<Text>().HasKey(t=>t.Id);
+            modelBuilder.Entity<Chapter>().HasIndex(c => c.TopicTextId);
+            modelBuilder.Entity<Chapter>().HasIndex(c => c.Path);
+
         }
 
         private Dictionary<Type, object> _trackedList = new Dictionary<Type, object>();

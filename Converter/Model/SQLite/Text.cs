@@ -8,6 +8,10 @@ namespace Converter.Model.SQLite
 {
     public class Text
     {
+        public Text() {
+            Id = ++IdCounter;
+        }
+        static public int IdCounter = 0;
         [Key]
         public int Id { get; set; }
 

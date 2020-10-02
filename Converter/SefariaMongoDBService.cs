@@ -164,7 +164,7 @@ namespace Converter.Service
                         versionTitleLG.Labels.Add(new Label { LanguageId = (int)LanguageTypes.Hebrew, Text = element.Value.AsString });
                         break;
                     case "chapter":
-                        text.Chapter = GenerateChapterTree(element.Value);
+                        text.Chapter = GenerateChapterTree(text,element.Value);
                         break;
                     default:
                         break;
@@ -176,7 +176,17 @@ namespace Converter.Service
 
             return text;
         }
+        public List<Chapter> ListChapters(Chapter c) {
+            List<Chapter> result = new List<Chapter>();
+            result.Add(c);
+            if(c.Children != null)
+            foreach (var item in c.Children)
+            {
+                result.AddRange(ListChapters(item));
+            }
 
+            return result;
+        }
         private int CountChapters(Chapter c) {
             int count = 0;
             if (c != null) {
@@ -192,15 +202,15 @@ namespace Converter.Service
             return count;
         }
 
-        private Chapter GenerateChapterTree(BsonValue value, Chapter parent = null, int index = 1)
+        private Chapter GenerateChapterTree(Text txt, BsonValue value, Chapter parent = null, int index = 1)
         {
-            Chapter instance = new Chapter { Index = index };
+            Chapter instance = new Chapter { Index = index, TopicText = txt, TopicTextId = txt.Id };
             if (parent != null) {
                 instance.ParentChapter = parent;
             }
 
             //To recreate fast Lookup Path
-            instance.Path = (parent!=null? parent.Index.ToString()+":":"")+instance.Index.ToString();
+            instance.Path = (parent!=null && parent.ParentChapter != null? parent.Path+":":"")+instance.Index.ToString();
 
             switch (value.BsonType) {
                 case BsonType.Array:
@@ -208,7 +218,7 @@ namespace Converter.Service
                     instance.Children = new List<Chapter>();
                     for (int i = 0; i < array.Count; i++)
                     {
-                        instance.Children.Add(GenerateChapterTree(array[i], instance, i+1));
+                        instance.Children.Add(GenerateChapterTree(txt, array[i], instance, i+1));
                         instance.HasChild = true;
                     }
                     break;
@@ -218,7 +228,7 @@ namespace Converter.Service
                     for (int i = 0; i < document.Elements.Count();i++)
                     {
                         var element = document.GetElement(i);
-                        var child = GenerateChapterTree(element.Value, instance, i+1);
+                        var child = GenerateChapterTree(txt, element.Value, instance, i+1);
                         child.Text = element.Name;
                         instance.Children.Add(child);
                     }
@@ -302,14 +312,41 @@ namespace Converter.Service
                     return null;
                 }
 
+                string parseLocation(string location) {
+                    var gemaraIndicators = new string[] { "a", "b" };
+                    for (int i = 0; i < gemaraIndicators.Length; i++)
+                    {
+                        var indicator = gemaraIndicators[i];
+                        var foundIndex = location.IndexOf(indicator, 0, StringComparison.OrdinalIgnoreCase);
+                        if (foundIndex >= 0) {
+                            var parts = location.Split(":");
+                            for (int j = 0; j < parts.Length; j++)
+                            {
+                                if (parts[j].Contains(indicator)) {
+                                    parts[j] = parts[j].Replace(indicator, "");
+                                    var value = int.Parse(parts[j]);
+                                    value = (value - 1) * 2 + (i + 1);
+                                    parts[j] = value.ToString();
+                                    break;
+                                }
+                            }
+
+                            return string.Join(":", parts);
+                        }
+                    }
+
+                    return location;
+                }
+
                 var primaryTopicSeperator = PrimaryTopic.LastIndexOf(' ');
                 string primaryTopicName = PrimaryTopic.Substring(0, primaryTopicSeperator);
-                string primaryTopicLocation = PrimaryTopic.Substring(primaryTopicSeperator + 1);
+                string primaryTopicLocation = parseLocation(PrimaryTopic.Substring(primaryTopicSeperator + 1));
+
                 int primaryTopicId = targetContext.Topics.Where(t => t.Name == primaryTopicName).Select(t => t.Id).FirstOrDefault();
 
                 var secondaryTopicSeperator = SecondaryTopic.LastIndexOf(' ');
                 string secondaryTopicName = SecondaryTopic.Substring(0, secondaryTopicSeperator);
-                string secondaryTopicLocation = SecondaryTopic.Substring(secondaryTopicSeperator + 1);
+                string secondaryTopicLocation = parseLocation(SecondaryTopic.Substring(secondaryTopicSeperator + 1));
                 int secondaryTopicId = targetContext.Topics.Where(t => t.Name == secondaryTopicName).Select(t => t.Id).FirstOrDefault();
 
                 link.PrimaryLocation = primaryTopicLocation;

@@ -11,6 +11,10 @@ namespace Converter.Model.SQLite
     {
         [Key]
         public int Id { get; set; }
+        [ForeignKey("Text")]
+        public int TopicTextId { get; set; }
+        public virtual Text TopicText { get; set; }
+
         public bool HasChild { get; set; }
         [ForeignKey("Chapter")]
         public int? ParentChapterId { get; set; }
