@@ -21,6 +21,7 @@ namespace Converter.Service
     {
         private IMongoCollection<BsonDocument> _texts;
         private IMongoCollection<BsonDocument> _summaries;
+        private IMongoCollection<BsonDocument> _index;
         private IMongoCollection<BsonDocument> _links;
 
         private MongoClient _client;
@@ -32,6 +33,7 @@ namespace Converter.Service
 
             _texts = database.GetCollection<BsonDocument>("texts");
             _summaries = database.GetCollection<BsonDocument>("summaries");
+            _index = database.GetCollection<BsonDocument>("index");
             _links = database.GetCollection<BsonDocument>("links");
 
             //var amount = _texts.CountDocuments(new BsonDocument());
@@ -41,7 +43,96 @@ namespace Converter.Service
         {
             //Topic root = new Topic() { Name = "toc" };
             Topic root = GetNestedTopics(_summaries.Find(_ => true).FirstOrDefault());
+
+            
+            //root.
+
             return root;
+        }
+
+        public void UpdateTopicsWithIndexData(SefariaSQLiteConversionContext targetContext) {
+            
+            //TODO: Need to parse Index and retrieve all alternative names with primary prioritizations
+            var indexedList = _index.Find(_ => true).ToList();
+            var topics = targetContext.Topics.Where(_ => true).ToList();
+
+            for (int j = 0; j < indexedList.Count; j++)
+            {
+                var index = indexedList[j];
+                //for (int i = 0; i < index.Elements.Count(); i++)
+                //{
+                    //var element = index.GetElement(i);
+                    var schema = index.GetElement("schema").Value.AsBsonDocument;
+
+                    var titles = schema.GetValue("titles", null).AsBsonArray;
+                    var key = schema.GetValue("key", null).AsString;
+
+                    if (key != null) {
+                        var topic = topics.Where(t => t.Name == key).FirstOrDefault();
+                        if (topic != null) {
+                            for (int k = 0; k < titles.Count; k++)
+                            {
+                                var title = titles[k];
+                                var text = title.AsBsonDocument.GetValue("text", null).AsString;
+                                var lang = title.AsBsonDocument.GetValue("lang", null).AsString;
+                                var primary = title.AsBsonDocument.GetValue("primary", false).AsBoolean;
+
+                                if (text != null)
+                                {
+                                    Label label = null;
+                                    //topics.Where(t => t == topic).SelectMany(t => t.LabelGroup.Labels).FirstOrDefault(l => l.Text == text);
+                                    bool isAdded = false;
+                                    foreach (var l in topic.LabelGroup.Labels)
+                                    {
+                                        if (l.Text == text)
+                                        {
+                                            label = l;
+                                            break;
+                                        }
+                                    }
+
+                                    if (label == null)
+                                    {
+                                        isAdded = true;
+                                        label = new Label();
+                                        label.LabelGroupId = (int)topic.LabelGroupId;
+                                        label.Text = text;
+                                        label.LanguageId = GetLanguageIdByString(lang);
+                                    }
+
+                                    if (label != null)
+                                    {
+                                        label.Primary = primary;
+                                    }
+
+                                    if (isAdded)
+                                    {
+                                        targetContext.Add(targetContext.Labels, label);
+                                    }
+                                    else
+                                    {
+                                        targetContext.Labels.Update(label);
+                                    }
+                                }
+                            }
+                        }
+                        
+                    }
+
+                //}
+            }
+            
+        }
+
+        private List<Topic> GetTopicList(Topic t) {
+            List<Topic> result = new List<Topic>();
+            result.Add(t);
+            
+            foreach (var item in t.Children)
+            {
+                result.AddRange(GetTopicList(item));
+            }
+            return result;
         }
 
         private Topic GetNestedTopics(BsonDocument document, Topic parent = null, int index = 1)

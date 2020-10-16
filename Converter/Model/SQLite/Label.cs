@@ -28,5 +28,7 @@ namespace Converter.Model.SQLite
         public Language Language { get; set; }
 
         public string Text { get; set; }
+
+        public bool Primary { get; set; }
     }
 }

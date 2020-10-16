@@ -122,6 +122,9 @@ namespace Converter
             _serviceSQLite.AddAsync(topic);
             _serviceSQLite.SaveChanges();
 
+            _serviceMongo.UpdateTopicsWithIndexData(_serviceSQLite);
+            _serviceSQLite.SaveChanges();
+
             //Processing Texts
             var totalTexts = Total = _serviceMongo.TextsCount();
             Log($"Processing: Texts #{totalTexts}");
